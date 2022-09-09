@@ -1,5 +1,7 @@
 package com.example.sopweek5;
 
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -9,13 +11,87 @@ import java.util.ArrayList;
 
 @RestController
 public class WordPublisher {
-    protected Word words;
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+    protected Word words = new Word();
 
     @RequestMapping(value = "/addBad/{word}", method = RequestMethod.GET)
     public ArrayList<String> addBadWord(@PathVariable("word") String s){
-        words = new Word();
         words.badWords.add(s);
         return words.badWords;
     }
 
+    @RequestMapping(value = "/delBad/{word}", method = RequestMethod.GET)
+    public ArrayList<String> deleteBadWord(@PathVariable("word") String s){
+        words.badWords.remove(s);
+        return  words.badWords;
+    }
+
+    @RequestMapping(value = "/addGood/{word}", method = RequestMethod.GET)
+    public ArrayList<String> addGoodWord(@PathVariable("word") String s){
+        words.goodWords.add(s);
+        return words.goodWords;
+    }
+
+    @RequestMapping(value = "/delGood/{word}", method = RequestMethod.GET)
+    public ArrayList<String> deleteGoodWord(@PathVariable("word") String s){
+        words.goodWords.remove(s);
+        return words.goodWords;
+    }
+
+    private static boolean isFoundGood = false;
+    private static boolean isFoundBad = false; //ถึงตรงนี้นะะะะ
+    @RequestMapping(value = "/proof/{sentence}", method = RequestMethod.GET)
+    public String proofSentence(@PathVariable("sentence") String s) {
+
+//        boolean isFoundAll;
+//        boolean isFoundG = false;
+//        boolean isFoundB = false;
+//        return s;
+
+        for (int i = 0; i < words.goodWords.size(); i++) {
+            String checkGood = words.goodWords.get(i);
+            isFoundGood = s.contains(checkGood);
+//            isFoundG = isFoundGood;
+
+            if (isFoundGood) {
+                rabbitTemplate.convertAndSend("Direct", "good", s);
+                return "Found Good Word";
+            }
+
+//            if (isFoundGood && isFoundBad){
+//                rabbitTemplate.convertAndSend("Fanout", "good", s);
+//                rabbitTemplate.convertAndSend("Fanout", "bad", s);
+//                return "Found Bad & Good Word";
+//            } else if (isFoundGood) {
+//                rabbitTemplate.convertAndSend("Direct", "good", s);
+//                return "Found Good Word";
+//            } else if (isFoundBad){
+//                rabbitTemplate.convertAndSend("Direct", "bad", s);
+//                return "Found Bad Word";
+//            }
+        }
+
+        for (int j = 0; j < words.badWords.size(); j++) {
+            String checkBad = words.badWords.get(j);
+            isFoundBad = s.contains(checkBad);
+//            isFoundB = isFoundBad;
+
+            if (isFoundBad) {
+                rabbitTemplate.convertAndSend("Direct", "bad", s);
+                return "Found Bad Word";
+            }
+
+        }
+//        System.out.println(isFoundB);
+//        System.out.println(isFoundG);
+        if (isFoundGood && isFoundBad) {
+            rabbitTemplate.convertAndSend("Fanout", "good", s);
+            rabbitTemplate.convertAndSend("Fanout", "bad", s);
+            return "Found Bad & Good Word";
+        }
+
+
+        return "Not Found";
+    }
 }
