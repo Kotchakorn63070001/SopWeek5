@@ -39,59 +39,39 @@ public class WordPublisher {
         return words.goodWords;
     }
 
-    private static boolean isFoundGood = false;
-    private static boolean isFoundBad = false; //ถึงตรงนี้นะะะะ
+//    private static boolean isFoundGood = false;
+//    private static boolean isFoundBad = false; //ถึงตรงนี้นะะะะ
     @RequestMapping(value = "/proof/{sentence}", method = RequestMethod.GET)
     public String proofSentence(@PathVariable("sentence") String s) {
-
-//        boolean isFoundAll;
-//        boolean isFoundG = false;
-//        boolean isFoundB = false;
-//        return s;
+        boolean isFoundGood = false;
+        boolean isFoundBad = false;
 
         for (int i = 0; i < words.goodWords.size(); i++) {
             String checkGood = words.goodWords.get(i);
             isFoundGood = s.contains(checkGood);
-//            isFoundG = isFoundGood;
-
             if (isFoundGood) {
-                rabbitTemplate.convertAndSend("Direct", "good", s);
-                return "Found Good Word";
+                break;
             }
-
-//            if (isFoundGood && isFoundBad){
-//                rabbitTemplate.convertAndSend("Fanout", "good", s);
-//                rabbitTemplate.convertAndSend("Fanout", "bad", s);
-//                return "Found Bad & Good Word";
-//            } else if (isFoundGood) {
-//                rabbitTemplate.convertAndSend("Direct", "good", s);
-//                return "Found Good Word";
-//            } else if (isFoundBad){
-//                rabbitTemplate.convertAndSend("Direct", "bad", s);
-//                return "Found Bad Word";
-//            }
         }
 
         for (int j = 0; j < words.badWords.size(); j++) {
             String checkBad = words.badWords.get(j);
             isFoundBad = s.contains(checkBad);
-//            isFoundB = isFoundBad;
-
             if (isFoundBad) {
-                rabbitTemplate.convertAndSend("Direct", "bad", s);
-                return "Found Bad Word";
+                break;
             }
-
         }
-//        System.out.println(isFoundB);
-//        System.out.println(isFoundG);
+
         if (isFoundGood && isFoundBad) {
-            rabbitTemplate.convertAndSend("Fanout", "good", s);
-            rabbitTemplate.convertAndSend("Fanout", "bad", s);
+            rabbitTemplate.convertAndSend("Fanout", "", s);
             return "Found Bad & Good Word";
+        } else if (isFoundGood){
+            rabbitTemplate.convertAndSend("Direct", "good", s);
+            return "Found Good Word";
+        } else if (isFoundBad) {
+            rabbitTemplate.convertAndSend("Direct", "bad", s);
+            return "Found Bad Word";
         }
-
-
         return "Not Found";
     }
 }
